@@ -94,7 +94,7 @@ class letterboxd_word:
 
     def get_score(self, word) -> int:
         unique_letters_used = set([letter for letter in word])
-        total = len(word) + len(unique_letters_used)
+        total = len(unique_letters_used)
 
         return total
 
