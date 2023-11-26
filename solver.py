@@ -182,14 +182,13 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], t_all:bool=
 
             except IndexError:
                 break
-            
-            print(best_guess)
+
 
             for word in tmp_dict[start_letter]:
                 if len(best_guess.letters - completed_letters) <= len(word.letters - completed_letters):
                     best_guess = word
 
-            print(best_guess)
+
             solved_order.append(best_guess)
             add_letters = best_guess.letters.difference(completed_letters)
             completed_letters.update(add_letters)
@@ -205,9 +204,6 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], t_all:bool=
                 else:
                     break
             
-        return
-            
-
         if completed_letters == accept_ls and not t_all:
             if n_words < 0:
                 print(tuple(solved_order))
