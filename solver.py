@@ -251,7 +251,7 @@ def solve(letterbox_set: List[List[str]] = [],  n:int=0, exclude:List[str]=[]):
     if n > 0:
         compile_solution(prune_list, accept_letters, n)
     else:
-        compile_solution(prune_list, accept_letters, )
+        compile_solution(prune_list, accept_letters)
 
 class CommandLine:
     def __init__(self):
