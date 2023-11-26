@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from typing import List, Set, Tuple
-import sys,argparse
+import argparse,heapq
 """
 GAME RULES (according to NYT)
 ------------------------------------------------------------------
@@ -90,14 +90,15 @@ def prune_words(sigma: List[str], accept_ls: Set[str], sides: List[set], exclude
 
 class letterboxd_word:
 
-    def __init__(self, word: str):
-        self.score = self.get_score(word)
+    def __init__(self, word: str, accepted_letters: Set[str]):
+        self.score = self.get_score(word, accepted_letters)
         self.word = word
         self.letters = set([letter for letter in self.word])
 
-    def get_score(self, word) -> int:
+    # The smaller the score, the higher value the word is
+    def get_score(self, word, accepted_letters: Set[str]) -> int:
         unique_letters_used = set([letter for letter in word])
-        total = len(unique_letters_used)
+        total = len(accepted_letters) - len(unique_letters_used)
 
         return total
 
@@ -118,56 +119,65 @@ class letterboxd_word:
         return f"'{self.word}' ({self.score})"
     def __str__(self):
         return f"'{self.word}' ({self.score})"
+    def encode(self):
+        return {'score':self.score, 'word':self.word, 'letters':self.letters}
 
-def compile_solution_in_n(accepted_words: List[str], accept_ls: Set[str], n_words:int) -> List[Tuple[str]]:
+def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = False, n_words:int = -1) -> List[Tuple[str]]:
 
     # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
-    letter_dict = {letter:[letterboxd_word(word) for word in accepted_words if word[0] == letter] for letter in accept_ls}
+    letter_dict = {letter:[letterboxd_word(word, accept_ls) for word in accepted_words if word[0] == letter] for letter in accept_ls}
+    for letter in accept_ls:
+        heapq.heapify(letter_dict[letter])
+    
+    best_word_heap = [letterboxd_word(word, accept_ls) for word in accepted_words]
+    heapq.heapify(best_word_heap)
 
-    for key in letter_dict:
-        letter_dict[key].sort(reverse=True)
-
+    
     # Log past first guesses and solved orders to compare
     completed_letters = set()
-    first_guesses = []
     solved_orders = []
 
     max_iterations = 0
-
+    #print(accepted_words)
     # Repeat Until Solution
     while (max_iterations < len(accepted_words)): 
         # Start on the word with the greatest score
-        best_guess = letterboxd_word("")
-        for key in letter_dict:
-            for word in letter_dict[key]:
-                if word in first_guesses:
-                    continue
-                if best_guess.score > word.score:
-                    continue
-                else:
-                    best_guess = word
+        best_guess = heapq.heappop(best_word_heap)
+        #print(best_guess==letterboxd_word("energetic", accept_ls))
 
         completed_letters = set()
         solved_order = []
+        tmp_dict = {letter:[] for letter in accept_ls}
+        for letter in letter_dict:
+            for word in letter_dict[letter]:
+                tmp_dict[letter].append(word)
+
         count = 0
 
+        if n_words <= -1:
+            rep = 3
+        else:
+            rep = n_words
+
         start_letter = best_guess.word[0]
-        # add best_guess to first_guesses as to not reuse when retrying
-        first_guesses.append(best_guess)
         completed_letters.update(best_guess.letters)
         solved_order.append(best_guess)
 
-        while completed_letters != accept_ls and count < 3:
+        while completed_letters != accept_ls and count < rep:
+            #print(temp_letter_dict['a'])
+            
             #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
 
             start_letter = best_guess.word[-1]
-            if letter_dict[start_letter]:
-                best_guess = letter_dict[start_letter][0]
-            else:
+            #print(letterboxd_word('energetic', accept_ls) in temp_letter_dict[start_letter])
+
+            try:
+                best_guess = heapq.heappop(tmp_dict[start_letter])
+            except IndexError:
                 break
 
-            for word in letter_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) < len(word.letters - completed_letters):
+            for word in tmp_dict[start_letter]:
+                if len(best_guess.letters - completed_letters) <= len(word.letters - completed_letters):
                     best_guess = word
 
             #letter_dict[start_letter].remove(best_guess)
@@ -177,273 +187,19 @@ def compile_solution_in_n(accepted_words: List[str], accept_ls: Set[str], n_word
             count += 1
 
         if completed_letters == accept_ls:
-            if len(solved_order) <= n_words:
+            if n_words < 0:
+                if p:
+                    print(tuple(solved_order))
+                solved_order.append(solved_order)
+            elif len(solved_order) <= n_words:
+                if p:
+                    print(tuple(solved_order))
                 solved_orders.append(solved_order)
 
         max_iterations+=1
+
     
     return solved_orders
-
-def compile_all_solutions(accepted_words: List[str], accept_ls: Set[str]) -> List[Tuple[str]]:
-
-    # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
-    letter_dict = {letter:[letterboxd_word(word) for word in accepted_words if word[0] == letter] for letter in accept_ls}
-
-    for key in letter_dict:
-        letter_dict[key].sort(reverse=True)
-
-    # Log past first guesses and solved orders to compare
-    completed_letters = set()
-    first_guesses = []
-    solved_orders = []
-
-    max_iterations = 0
-
-    # Repeat Until Solution
-    while (max_iterations < len(accepted_words)): 
-        # Start on the word with the greatest score
-        best_guess = letterboxd_word("")
-        for key in letter_dict:
-            for word in letter_dict[key]:
-                if word in first_guesses:
-                    continue
-                if best_guess.score > word.score:
-                    continue
-                else:
-                    best_guess = word
-
-        completed_letters = set()
-        solved_order = []
-        count = 0
-
-        start_letter = best_guess.word[0]
-        # add best_guess to first_guesses as to not reuse when retrying
-        first_guesses.append(best_guess)
-        completed_letters.update(best_guess.letters)
-        solved_order.append(best_guess)
-
-        while completed_letters != accept_ls and count < 3:
-            #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
-
-            start_letter = best_guess.word[-1]
-            if letter_dict[start_letter]:
-                best_guess = letter_dict[start_letter][0]
-            else:
-                break
-
-            for word in letter_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) < len(word.letters - completed_letters):
-                    best_guess = word
-
-            #letter_dict[start_letter].remove(best_guess)
-            completed_letters.update(best_guess.letters)
-            solved_order.append(best_guess)
-
-            count += 1
-
-        if completed_letters == accept_ls:
-            solved_orders.append(solved_order)
-
-        max_iterations+=1
-
-    return solved_orders
-          
-def print_solution_in_n(accepted_words: List[str], accept_ls: Set[str], n_words:int) -> None:
-
-    # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
-    letter_dict = {letter:[letterboxd_word(word) for word in accepted_words if word[0] == letter] for letter in accept_ls}
-
-    for key in letter_dict:
-        letter_dict[key].sort(reverse=True)
-
-    # Log past first guesses and solved orders to compare
-    completed_letters = set()
-    first_guesses = []
-    solved_orders = []
-
-    max_iterations = 0
-
-    # Repeat Until Solution
-    while (max_iterations < len(accepted_words)): 
-        # Start on the word with the greatest score
-        best_guess = letterboxd_word("")
-        for key in letter_dict:
-            for word in letter_dict[key]:
-                if word in first_guesses:
-                    continue
-                if best_guess.score > word.score:
-                    continue
-                else:
-                    best_guess = word
-
-        completed_letters = set()
-        solved_order = []
-        count = 0
-
-        start_letter = best_guess.word[0]
-        # add best_guess to first_guesses as to not reuse when retrying
-        first_guesses.append(best_guess)
-        completed_letters.update(best_guess.letters)
-        solved_order.append(best_guess)
-
-        while completed_letters != accept_ls and count < 3:
-            #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
-
-            start_letter = best_guess.word[-1]
-            if letter_dict[start_letter]:
-                best_guess = letter_dict[start_letter][0]
-            else:
-                break
-
-            for word in letter_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) < len(word.letters - completed_letters):
-                    best_guess = word
-
-            #letter_dict[start_letter].remove(best_guess)
-            completed_letters.update(best_guess.letters)
-            solved_order.append(best_guess)
-
-            count += 1
-
-        if completed_letters == accept_ls:
-            if len(solved_order) <= n_words:
-                print(tuple(solved_order))
-                solved_orders.append(solved_order)
-
-        max_iterations+=1
-    
-    if len(solved_orders) == 0:
-        print(f"No Solution Found in {n_words} words!")
-
-def print_all_solutions(accepted_words: List[str], accept_ls: Set[str]) -> None:
-
-    # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
-    letter_dict = {letter:[letterboxd_word(word) for word in accepted_words if word[0] == letter] for letter in accept_ls}
-
-    for key in letter_dict:
-        letter_dict[key].sort(reverse=True)
-
-    # Log past first guesses and solved orders to compare
-    completed_letters = set()
-    first_guesses = []
-    solved_orders = []
-
-    max_iterations = 0
-
-    # Repeat Until Solution
-    while (max_iterations < len(accepted_words)): 
-        # Start on the word with the greatest score
-        best_guess = letterboxd_word("")
-        for key in letter_dict:
-            for word in letter_dict[key]:
-                if word in first_guesses:
-                    continue
-                if best_guess.score > word.score:
-                    continue
-                else:
-                    best_guess = word
-
-        completed_letters = set()
-        solved_order = []
-        count = 0
-
-        start_letter = best_guess.word[0]
-        # add best_guess to first_guesses as to not reuse when retrying
-        first_guesses.append(best_guess)
-        completed_letters.update(best_guess.letters)
-        solved_order.append(best_guess)
-
-        while completed_letters != accept_ls and count < 3:
-            #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
-
-            start_letter = best_guess.word[-1]
-            if letter_dict[start_letter]:
-                best_guess = letter_dict[start_letter][0]
-            else:
-                break
-
-            for word in letter_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) < len(word.letters - completed_letters):
-                    best_guess = word
-
-            #letter_dict[start_letter].remove(best_guess)
-            completed_letters.update(best_guess.letters)
-            solved_order.append(best_guess)
-
-            count += 1
-
-        if completed_letters == accept_ls:
-            print(tuple(solved_order))
-            solved_orders.append(solved_order)
-
-        max_iterations+=1
-
-def a_solution_in_n(accepted_words: List[str], accept_ls: Set[str], n_words:int) -> None:
-
-    # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
-    letter_dict = {letter:[letterboxd_word(word) for word in accepted_words if word[0] == letter] for letter in accept_ls}
-
-    for key in letter_dict:
-        letter_dict[key].sort(reverse=True)
-
-    # Log past first guesses and solved orders to compare
-    completed_letters = set()
-    first_guesses = []
-    solved_orders = []
-
-    max_iterations = 0
-
-    # Repeat Until Solution
-    while (max_iterations < len(accepted_words)): 
-        # Start on the word with the greatest score
-        best_guess = letterboxd_word("")
-        for key in letter_dict:
-            for word in letter_dict[key]:
-                if word in first_guesses:
-                    continue
-                if best_guess.score > word.score:
-                    continue
-                else:
-                    best_guess = word
-
-        completed_letters = set()
-        solved_order = []
-        count = 0
-
-        start_letter = best_guess.word[0]
-        # add best_guess to first_guesses as to not reuse when retrying
-        first_guesses.append(best_guess)
-        completed_letters.update(best_guess.letters)
-        solved_order.append(best_guess)
-
-        while completed_letters != accept_ls and count < 3:
-            #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
-
-            start_letter = best_guess.word[-1]
-            if letter_dict[start_letter]:
-                best_guess = letter_dict[start_letter][0]
-            else:
-                break
-
-            for word in letter_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) < len(word.letters - completed_letters):
-                    best_guess = word
-
-            #letter_dict[start_letter].remove(best_guess)
-            completed_letters.update(best_guess.letters)
-            solved_order.append(best_guess)
-
-            count += 1
-
-        if completed_letters == accept_ls:
-            if len(solved_order) <= n_words:
-                print(tuple(solved_order))
-                solved_orders.append(solved_order)
-
-        max_iterations+=1
-    
-    if len(solved_orders) == 0:
-        print(f"No Solution Found in {n_words} words!")
 
 def solve(letterbox_set: List[List[str]] = [], p: bool=False, n:int=0, exclude:List[str]=[]):
     """
@@ -496,24 +252,24 @@ def solve(letterbox_set: List[List[str]] = [], p: bool=False, n:int=0, exclude:L
 
     if not p:
         if n > 0:
-            solution_list = compile_solution_in_n(prune_list, accept_letters, n)
+            solution_list = compile_solution(prune_list, accept_letters, False, n)
         else:
-            solution_list = compile_all_solutions(prune_list, accept_letters)
+            solution_list = compile_solution(prune_list, accept_letters, False)
 
         return solution_list
     
     else:
         if n > 0:
-            print_solution_in_n(prune_list, accept_letters, n)
+            compile_solution(prune_list, accept_letters, True, n)
         else:
-            print_all_solutions(prune_list, accept_letters)
+            compile_solution(prune_list, accept_letters, True)
 
 class CommandLine:
     def __init__(self):
         parser = argparse.ArgumentParser(description = "Solves a LetterBoxed square")
         parser.add_argument("side", metavar="S", help="The letters on a side of a Letterboxed square", nargs='*', type=str, default="")
-        parser.add_argument("-n", "--num", help = "Example: Print argument", required = False, type=int, default = 0)
-        parser.add_argument("-p", "--print", help = "Example: Print argument", action="store_true", required = False, default = "")
+        parser.add_argument("-n", "--num", help = "Find solution in n words", required = False, type=int, default = 0)
+        parser.add_argument("-p", "--print", help = "Prints output to stdout", action="store_true", required = False, default = "")
         parser.add_argument("-e", "--exclude", help = "Words excluded from master word list", nargs="+", type=str, default = "")
 
         argument = parser.parse_args()
@@ -533,13 +289,3 @@ class CommandLine:
 
 if __name__ == "__main__":
     app = CommandLine()
-
-    # if len(sys.argv) >= 6:
-    #     s = solve([[l.lower() for l in sys.argv[1]], [l.lower() for l in sys.argv[2]], [l.lower() for l in sys.argv[3]], [l.lower() for l in sys.argv[4]]], int(sys.argv[5]))
-    # elif len(sys.argv) >= 5:
-    #     s = solve([[l.lower() for l in sys.argv[1]], [l.lower() for l in sys.argv[2]], [l.lower() for l in sys.argv[3]], [l.lower() for l in sys.argv[4]]])
-    # else:
-    #     s = solve()
-
-    # for sol in s: 
-    #     print(sol)
