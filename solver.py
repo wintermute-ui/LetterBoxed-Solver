@@ -122,7 +122,7 @@ class letterboxd_word:
     def encode(self):
         return {'score':self.score, 'word':self.word, 'letters':self.letters}
 
-def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = False, n_words:int = -1) -> List[Tuple[str]]:
+def compile_solution(accepted_words: List[str], accept_ls: Set[str], n_words:int = -1) -> List[Tuple[str]]:
 
     # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
     letter_dict = {letter:[letterboxd_word(word, accept_ls) for word in accepted_words if word[0] == letter] for letter in accept_ls}
@@ -188,12 +188,10 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = Fa
 
         if completed_letters == accept_ls:
             if n_words < 0:
-                if p:
-                    print(tuple(solved_order))
+                print(tuple(solved_order))
                 solved_order.append(solved_order)
             elif len(solved_order) <= n_words:
-                if p:
-                    print(tuple(solved_order))
+                print(tuple(solved_order))
                 solved_orders.append(solved_order)
 
         max_iterations+=1
@@ -201,7 +199,7 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = Fa
     
     return solved_orders
 
-def solve(letterbox_set: List[List[str]] = [], p: bool=False, n:int=0, exclude:List[str]=[]):
+def solve(letterbox_set: List[List[str]] = [],  n:int=0, exclude:List[str]=[]):
     """
     letterbox_set: List of the sides of a letterboxed puzzle (format: [['a','b','c], ['d','e','f], ...])
     """
@@ -250,26 +248,16 @@ def solve(letterbox_set: List[List[str]] = [], p: bool=False, n:int=0, exclude:L
             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
     prune_list = prune_words(alpha, accept_letters, sides, exclude)
 
-    if not p:
-        if n > 0:
-            solution_list = compile_solution(prune_list, accept_letters, False, n)
-        else:
-            solution_list = compile_solution(prune_list, accept_letters, False)
-
-        return solution_list
-    
+    if n > 0:
+        compile_solution(prune_list, accept_letters, n)
     else:
-        if n > 0:
-            compile_solution(prune_list, accept_letters, True, n)
-        else:
-            compile_solution(prune_list, accept_letters, True)
+        compile_solution(prune_list, accept_letters, )
 
 class CommandLine:
     def __init__(self):
         parser = argparse.ArgumentParser(description = "Solves a LetterBoxed square")
         parser.add_argument("side", metavar="S", help="The letters on a side of a Letterboxed square", nargs='*', type=str, default="")
         parser.add_argument("-n", "--num", help = "Find solution in n words", required = False, type=int, default = 0)
-        parser.add_argument("-p", "--print", help = "Prints output to stdout", action="store_true", required = False, default = "")
         parser.add_argument("-e", "--exclude", help = "Words excluded from master word list", nargs="+", type=str, default = "")
 
         argument = parser.parse_args()
@@ -283,7 +271,7 @@ class CommandLine:
         if argument.exclude:
             exclusion = [ex.strip().lower() for ex in argument.exclude]
 
-        solve(sides, argument.print, argument.num, exclusion)
+        solve(sides, argument.num, exclusion)
         
         
 
