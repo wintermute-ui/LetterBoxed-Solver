@@ -1,2 +1,4 @@
 /prevsolver.py
-/build/*
+/build
+/dist
+/solver.spec

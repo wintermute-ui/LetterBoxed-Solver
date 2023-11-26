@@ -122,7 +122,7 @@ class letterboxd_word:
     def encode(self):
         return {'score':self.score, 'word':self.word, 'letters':self.letters}
 
-def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = False, n_words:int = -1) -> List[Tuple[str]]:
+def compile_solution(accepted_words: List[str], accept_ls: Set[str], t_all:bool=False, n_words:int = -1) -> List[Tuple[str]]:
 
     # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
     letter_dict = {letter:[letterboxd_word(word, accept_ls) for word in accepted_words if word[0] == letter] for letter in accept_ls}
@@ -138,21 +138,19 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = Fa
     solved_orders = []
 
     max_iterations = 0
-    #print(accepted_words)
+
     # Repeat Until Solution
     while (max_iterations < len(accepted_words)): 
+        
         # Start on the word with the greatest score
         best_guess = heapq.heappop(best_word_heap)
-        #print(best_guess==letterboxd_word("energetic", accept_ls))
-
+        
         completed_letters = set()
         solved_order = []
         tmp_dict = {letter:[] for letter in accept_ls}
         for letter in letter_dict:
             for word in letter_dict[letter]:
                 tmp_dict[letter].append(word)
-
-        count = 0
 
         if n_words <= -1:
             rep = 3
@@ -162,46 +160,67 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], p:bool = Fa
         start_letter = best_guess.word[0]
         completed_letters.update(best_guess.letters)
         solved_order.append(best_guess)
-
-        while completed_letters != accept_ls and count < rep:
-            #print(temp_letter_dict['a'])
-            
-            #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
-
+        
+        if completed_letters == accept_ls and len(solved_order) <= n_words:
+                if t_all:
+                    if n_words < 0:
+                        print(tuple(solved_order))
+                        solved_orders.append(solved_order)
+                    elif len(solved_order) <= n_words:
+                        print(tuple(solved_order))
+                        solved_orders.append(solved_order)
+                else:
+                    count = rep + 1
+        
+        while len(solved_order) < rep:
+            #print(solved_orders)
             start_letter = best_guess.word[-1]
-            #print(letterboxd_word('energetic', accept_ls) in temp_letter_dict[start_letter])
+            prev = best_guess
 
             try:
                 best_guess = heapq.heappop(tmp_dict[start_letter])
+
             except IndexError:
                 break
+            
+            print(best_guess)
 
             for word in tmp_dict[start_letter]:
                 if len(best_guess.letters - completed_letters) <= len(word.letters - completed_letters):
                     best_guess = word
 
-            #letter_dict[start_letter].remove(best_guess)
-            completed_letters.update(best_guess.letters)
+            print(best_guess)
             solved_order.append(best_guess)
+            add_letters = best_guess.letters.difference(completed_letters)
+            completed_letters.update(add_letters)
 
-            count += 1
+            if completed_letters == accept_ls and len(solved_order) <= n_words:
+                if t_all:
+                    print(tuple(solved_order))
+                    solved_orders.append(solved_order)
+                    completed_letters.difference_update(add_letters)
+                    solved_order.remove(best_guess)
+                    best_guess = prev
 
-        if completed_letters == accept_ls:
+                else:
+                    break
+            
+        return
+            
+
+        if completed_letters == accept_ls and not t_all:
             if n_words < 0:
-                if p:
-                    print(tuple(solved_order))
-                solved_order.append(solved_order)
+                print(tuple(solved_order))
+                solved_orders.append(solved_order)
             elif len(solved_order) <= n_words:
-                if p:
-                    print(tuple(solved_order))
+                print(tuple(solved_order))
                 solved_orders.append(solved_order)
 
         max_iterations+=1
 
-    
     return solved_orders
 
-def solve(letterbox_set: List[List[str]] = [], p: bool=False, n:int=0, exclude:List[str]=[]):
+def solve(letterbox_set: List[List[str]] = [], t_all:bool=False, n:int=0, exclude:List[str]=[]):
     """
     letterbox_set: List of the sides of a letterboxed puzzle (format: [['a','b','c], ['d','e','f], ...])
     """
@@ -250,26 +269,17 @@ def solve(letterbox_set: List[List[str]] = [], p: bool=False, n:int=0, exclude:L
             'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z']
     prune_list = prune_words(alpha, accept_letters, sides, exclude)
 
-    if not p:
-        if n > 0:
-            solution_list = compile_solution(prune_list, accept_letters, False, n)
-        else:
-            solution_list = compile_solution(prune_list, accept_letters, False)
-
-        return solution_list
-    
+    if n > 0:
+        compile_solution(prune_list, accept_letters, t_all, n)
     else:
-        if n > 0:
-            compile_solution(prune_list, accept_letters, True, n)
-        else:
-            compile_solution(prune_list, accept_letters, True)
+        compile_solution(prune_list, accept_letters, t_all)
 
 class CommandLine:
     def __init__(self):
         parser = argparse.ArgumentParser(description = "Solves a LetterBoxed square")
         parser.add_argument("side", metavar="S", help="The letters on a side of a Letterboxed square", nargs='*', type=str, default="")
+        parser.add_argument("-a", "--all", help= "Find all solutions combinations", required=False, action="store_true", default="")
         parser.add_argument("-n", "--num", help = "Find solution in n words", required = False, type=int, default = 0)
-        parser.add_argument("-p", "--print", help = "Prints output to stdout", action="store_true", required = False, default = "")
         parser.add_argument("-e", "--exclude", help = "Words excluded from master word list", nargs="+", type=str, default = "")
 
         argument = parser.parse_args()
@@ -283,7 +293,7 @@ class CommandLine:
         if argument.exclude:
             exclusion = [ex.strip().lower() for ex in argument.exclude]
 
-        solve(sides, argument.print, argument.num, exclusion)
+        solve(sides, argument.all, argument.num, exclusion)
         
         
 
