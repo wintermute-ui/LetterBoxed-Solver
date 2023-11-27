@@ -25,9 +25,39 @@ with open("words.txt", "r") as f:
 ```
 3. Input the sides and letters of a Letter Boxed game
 4. Parse and remove entries in the list of words that are impossible to use in the game (i.e. don't follow the rules)
+```
+new_list = []
 
-5. Score the words remaining by the unique letters used in each word
+for word in word_list:
+
+     removed = False
+     for side in sides:
+         if removed:
+             break
+         i = 0
+         while i < len(word)-1:
+
+             if (word[i] in side) and (word[i+1] in side):
+                 removed = True
+                 break
+                 
+             i += 1
+     
+     if not removed:
+         new_list.append(word)
+```
+5. Score the words by the unique letters used in each word
+```
+def get_score(word:str, accepted_letters: Set[str]) -> int:
+    unique_letters_used = set([letter for letter in word])
+    total = len(accepted_letters) - len(unique_letters_used)
+
+    return total
+```
 6. Sort the words into tables where the first letter of the word is the key to the word itself ('a': ['apple','acting',...], ... )
+```
+letter_dict = {letter:[word for word in accepted_words if word[0] == letter] for letter in accept_letters}
+```
 7. Start with the best scoring word and run the process below.
    - If the letters of our current word are all letters in our game: our answer is just our current word.
    - If the letters of our current word are not all letters: run process on the best word in the list of words with the first letter equal to the last letter of our current word.
@@ -35,6 +65,7 @@ with open("words.txt", "r") as f:
    - If there are no more remaining words to use and still unused letters in the game: repeat with the next best word in our list.
 8. If all of that works correctly, we should get all possible soultions to the set of sides and letters of our Letter Boxed game.
 
- 
+## Getting Started
+
 
    
