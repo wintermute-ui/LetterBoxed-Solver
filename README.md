@@ -17,7 +17,7 @@ The actual rules below were taken from this NYT article (https://www.nytimes.com
 
 The solution to this task is seemingly straight-forward: 
 1. Import a list of words (included words.txt in repo)
-```
+```python
 word_list = []    
 with open("words.txt", "r") as f:
     for word in f:
@@ -25,7 +25,7 @@ with open("words.txt", "r") as f:
 ```
 3. Input the sides and letters of a Letter Boxed game
 4. Parse and remove entries in the list of words that are impossible to use in the game (i.e. don't follow the rules)
-```
+```python
 new_list = []
 
 for word in word_list:
@@ -47,7 +47,7 @@ for word in word_list:
          new_list.append(word)
 ```
 5. Score the words by the unique letters used in each word
-```
+```python
 def get_score(word:str, accepted_letters: Set[str]) -> int:
     unique_letters_used = set([letter for letter in word])
     total = len(accepted_letters) - len(unique_letters_used)
@@ -55,7 +55,7 @@ def get_score(word:str, accepted_letters: Set[str]) -> int:
     return total
 ```
 6. Sort the words into tables where the first letter of the word is the key to the word itself ('a': ['apple','acting',...], ... )
-```
+```python
 letter_dict = {letter:[word for word in accepted_words if word[0] == letter] for letter in accept_letters}
 ```
 7. Start with the best scoring word and run the process below.
@@ -65,7 +65,27 @@ letter_dict = {letter:[word for word in accepted_words if word[0] == letter] for
    - If there are no more remaining words to use and still unused letters in the game: repeat with the next best word in our list.
 8. If all of that works correctly, we should get all possible soultions to the set of sides and letters of our Letter Boxed game.
 
-## Getting Started
+## Installation
+
+Start by downloading the lastest [release](https://github.com/wintermute-ui/LetterBoxed-Solver/releases/latest)
+
+Extracting the zipped file, you will find folder containing a 'solver.exe' executable and a 'words.txt' text file. The text file is the file the program reads to get the starting list of words.
+
+
+## Usage
+
+You can run the solver using the command below, includes optional arguments:
+```console
+./solver.exe [S ...] [-n NUM] [-e [EXCLUDE ...]] 
+
+positional arguments:
+  S                     Sides of a Letterboxed square (ex. [[abd], [hwe], ...])
+
+options:
+  -n NUM, --num NUM     Find solution in n words
+  -e [EXCLUDE ...], --exclude [EXCLUDE ...] Words to exclude from master list
+```
+
 
 
    
