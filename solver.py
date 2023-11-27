@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Dict
 import argparse,heapq
 """
 GAME RULES (according to NYT)
@@ -94,6 +94,7 @@ class letterboxd_word:
         self.score = self.get_score(word, accepted_letters)
         self.word = word
         self.letters = set([letter for letter in self.word])
+        self.accepted_letters = accepted_letters
 
     # The smaller the score, the higher value the word is
     def get_score(self, word, accepted_letters: Set[str]) -> int:
@@ -122,84 +123,43 @@ class letterboxd_word:
     def encode(self):
         return {'score':self.score, 'word':self.word, 'letters':self.letters}
 
-def compile_solution(accepted_words: List[str], accept_ls: Set[str], n_words:int = -1) -> List[Tuple[str]]:
+def recursive_compile(solution: List[letterboxd_word], letter_dict: Dict[str,List[letterboxd_word]], completed_letters:Set[str], n_words:int) -> int:
+    count = 0
+    if n_words <= 1:
+        return count
+    
+    for word in letter_dict[solution[-1].word[-1]]:
+        tmp_letters = completed_letters.union(word.letters)
+        if tmp_letters == word.accepted_letters:
+
+            count+=1
+            print(solution + [word])
+
+            
+        else:
+            count += recursive_compile(solution + [word], letter_dict, tmp_letters, n_words-1)
+            
+
+    return count
+            
+    
+
+def compile_solution(accepted_words: List[str], accept_ls: Set[str], n_words:int = 2) -> None:
 
     # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
     letter_dict = {letter:[letterboxd_word(word, accept_ls) for word in accepted_words if word[0] == letter] for letter in accept_ls}
-    for letter in accept_ls:
-        heapq.heapify(letter_dict[letter])
     
     best_word_heap = [letterboxd_word(word, accept_ls) for word in accepted_words]
     heapq.heapify(best_word_heap)
-
     
-    # Log past first guesses and solved orders to compare
-    completed_letters = set()
-    solved_orders = []
-
-    max_iterations = 0
-    #print(accepted_words)
-    # Repeat Until Solution
-    while (max_iterations < len(accepted_words)): 
-        # Start on the word with the greatest score
-        best_guess = heapq.heappop(best_word_heap)
-        #print(best_guess==letterboxd_word("energetic", accept_ls))
-
-        completed_letters = set()
-        solved_order = []
-        tmp_dict = {letter:[] for letter in accept_ls}
-        for letter in letter_dict:
-            for word in letter_dict[letter]:
-                tmp_dict[letter].append(word)
-
-        count = 0
-
-        if n_words <= -1:
-            rep = 3
-        else:
-            rep = n_words
-
-        start_letter = best_guess.word[0]
-        completed_letters.update(best_guess.letters)
-        solved_order.append(best_guess)
-
-        while completed_letters != accept_ls and count < rep:
-            #print(temp_letter_dict['a'])
-            
-            #print(completed_letters, ":", accept_ls, completed_letters==accept_ls)
-
-            start_letter = best_guess.word[-1]
-            #print(letterboxd_word('energetic', accept_ls) in temp_letter_dict[start_letter])
-
-            try:
-                best_guess = heapq.heappop(tmp_dict[start_letter])
-            except IndexError:
-                break
-
-            for word in tmp_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) <= len(word.letters - completed_letters):
-                    best_guess = word
-
-            #letter_dict[start_letter].remove(best_guess)
-            completed_letters.update(best_guess.letters)
-            solved_order.append(best_guess)
-
-            count += 1
-
-        if completed_letters == accept_ls:
-            if n_words < 0:
-                print(tuple(solved_order))
-                solved_order.append(solved_order)
-            elif len(solved_order) <= n_words:
-                print(tuple(solved_order))
-                solved_orders.append(solved_order)
-
-        max_iterations+=1
-
+    total = 0
+    for i in range(len(accepted_words)):
+        best_word = heapq.heappop(best_word_heap)
+        total += recursive_compile([best_word], letter_dict, best_word.letters, n_words)
     
-    return solved_orders
+    print(f"{total} solutions found!")
 
-def solve(letterbox_set: List[List[str]] = [],  n:int=0, exclude:List[str]=[]):
+def solve(letterbox_set: List[List[str]] = [], n:int=0, exclude:List[str]=[]):
     """
     letterbox_set: List of the sides of a letterboxed puzzle (format: [['a','b','c], ['d','e','f], ...])
     """
