@@ -77,7 +77,8 @@ Extracting the zipped file, you will find folder containing a 'solver.exe' execu
 You can run the solver using the command below, includes optional arguments:
 ```console
 ./solver.exe [S ...] [-n NUM] [-e [EXCLUDE ...]] 
-
+```
+```
 positional arguments:
   S                     Sides of a Letterboxed square (ex. [[abd], [hwe], ...])
 
