@@ -142,9 +142,9 @@ def recursive_compile(solution: List[letterboxd_word], letter_dict: Dict[str,Lis
             if len(solution + [word]) == nmax_words[0]:
                 count+=1
                 print(solution + [word])
-            elif t_all:
-                count+=1
-                print(solution + [word])
+            # elif t_all:
+            #     count+=1
+            #     print(solution + [word])
             
         else:
             letter_dict[solution[-1].word[-1]].remove(word)
@@ -153,7 +153,6 @@ def recursive_compile(solution: List[letterboxd_word], letter_dict: Dict[str,Lis
 
     return count
             
-    
 
 def compile_solution(accepted_words: List[str], accept_ls: Set[str], t_all:bool, n_words:int = 2) -> None:
 
@@ -235,7 +234,7 @@ class CommandLine:
         parser.add_argument("side", metavar="S", help="The letters on a side of a Letterboxed square", nargs='*', type=str, default="")
         parser.add_argument("-n", "--num", help = "Find solutions in exactly n words", required = False, type=int, default=2)
         parser.add_argument("-e", "--exclude", help = "Words excluded from master word list", nargs="+", type=str, default = "")
-        parser.add_argument("-a", "--all", help="Find all possible solutions (with -n includes all solutions up to n words)", required=False, action="store_true", default=False)
+        parser.add_argument("-a", "--all", help="Find all possible solutions (multiple solutions per start word)", required=False, action="store_true", default=False)
 
         argument = parser.parse_args()
         sides = []
