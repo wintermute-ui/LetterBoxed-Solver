@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import List, Set, Tuple
+from typing import List, Set, Tuple, Dict
 import argparse,heapq
 """
 GAME RULES (according to NYT)
@@ -94,6 +94,7 @@ class letterboxd_word:
         self.score = self.get_score(word, accepted_letters)
         self.word = word
         self.letters = set([letter for letter in self.word])
+        self.accepted_letters = accepted_letters
 
     # The smaller the score, the higher value the word is
     def get_score(self, word, accepted_letters: Set[str]) -> int:
@@ -122,101 +123,43 @@ class letterboxd_word:
     def encode(self):
         return {'score':self.score, 'word':self.word, 'letters':self.letters}
 
-def compile_solution(accepted_words: List[str], accept_ls: Set[str], t_all:bool=False, n_words:int = -1) -> List[Tuple[str]]:
+def recursive_compile(solution: List[letterboxd_word], letter_dict: Dict[str,List[letterboxd_word]], completed_letters:Set[str], n_words:int) -> int:
+    count = 0
+    if n_words <= 1:
+        return count
+    
+    for word in letter_dict[solution[-1].word[-1]]:
+        tmp_letters = completed_letters.union(word.letters)
+        if tmp_letters == word.accepted_letters:
+
+            count+=1
+            print(solution + [word])
+
+            
+        else:
+            count += recursive_compile(solution + [word], letter_dict, tmp_letters, n_words-1)
+            
+
+    return count
+            
+    
+
+def compile_solution(accepted_words: List[str], accept_ls: Set[str], n_words:int = 2) -> None:
 
     # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
     letter_dict = {letter:[letterboxd_word(word, accept_ls) for word in accepted_words if word[0] == letter] for letter in accept_ls}
-    for letter in accept_ls:
-        heapq.heapify(letter_dict[letter])
     
     best_word_heap = [letterboxd_word(word, accept_ls) for word in accepted_words]
     heapq.heapify(best_word_heap)
-
     
-    # Log past first guesses and solved orders to compare
-    completed_letters = set()
-    solved_orders = []
+    total = 0
+    for i in range(len(accepted_words)):
+        best_word = heapq.heappop(best_word_heap)
+        total += recursive_compile([best_word], letter_dict, best_word.letters, n_words)
+    
+    print(f"{total} solutions found!")
 
-    max_iterations = 0
-
-    # Repeat Until Solution
-    while (max_iterations < len(accepted_words)): 
-        
-        # Start on the word with the greatest score
-        best_guess = heapq.heappop(best_word_heap)
-        
-        completed_letters = set()
-        solved_order = []
-        tmp_dict = {letter:[] for letter in accept_ls}
-        for letter in letter_dict:
-            for word in letter_dict[letter]:
-                tmp_dict[letter].append(word)
-
-        if n_words <= -1:
-            rep = 3
-        else:
-            rep = n_words
-
-        start_letter = best_guess.word[0]
-        completed_letters.update(best_guess.letters)
-        solved_order.append(best_guess)
-        
-        if completed_letters == accept_ls and len(solved_order) <= n_words:
-                if t_all:
-                    if n_words < 0:
-                        print(tuple(solved_order))
-                        solved_orders.append(solved_order)
-                    elif len(solved_order) <= n_words:
-                        print(tuple(solved_order))
-                        solved_orders.append(solved_order)
-                else:
-                    count = rep + 1
-        
-        while len(solved_order) < rep:
-            #print(solved_orders)
-            start_letter = best_guess.word[-1]
-            prev = best_guess
-
-            try:
-                best_guess = heapq.heappop(tmp_dict[start_letter])
-
-            except IndexError:
-                break
-
-
-            for word in tmp_dict[start_letter]:
-                if len(best_guess.letters - completed_letters) <= len(word.letters - completed_letters):
-                    best_guess = word
-
-
-            solved_order.append(best_guess)
-            add_letters = best_guess.letters.difference(completed_letters)
-            completed_letters.update(add_letters)
-
-            if completed_letters == accept_ls and len(solved_order) <= n_words:
-                if t_all:
-                    print(tuple(solved_order))
-                    solved_orders.append(solved_order)
-                    completed_letters.difference_update(add_letters)
-                    solved_order.remove(best_guess)
-                    best_guess = prev
-
-                else:
-                    break
-            
-        if completed_letters == accept_ls and not t_all:
-            if n_words < 0:
-                print(tuple(solved_order))
-                solved_orders.append(solved_order)
-            elif len(solved_order) <= n_words:
-                print(tuple(solved_order))
-                solved_orders.append(solved_order)
-
-        max_iterations+=1
-
-    return solved_orders
-
-def solve(letterbox_set: List[List[str]] = [], t_all:bool=False, n:int=0, exclude:List[str]=[]):
+def solve(letterbox_set: List[List[str]] = [], n:int=0, exclude:List[str]=[]):
     """
     letterbox_set: List of the sides of a letterboxed puzzle (format: [['a','b','c], ['d','e','f], ...])
     """
@@ -266,15 +209,14 @@ def solve(letterbox_set: List[List[str]] = [], t_all:bool=False, n:int=0, exclud
     prune_list = prune_words(alpha, accept_letters, sides, exclude)
 
     if n > 0:
-        compile_solution(prune_list, accept_letters, t_all, n)
+        compile_solution(prune_list, accept_letters, n)
     else:
-        compile_solution(prune_list, accept_letters, t_all)
+        compile_solution(prune_list, accept_letters)
 
 class CommandLine:
     def __init__(self):
         parser = argparse.ArgumentParser(description = "Solves a LetterBoxed square")
         parser.add_argument("side", metavar="S", help="The letters on a side of a Letterboxed square", nargs='*', type=str, default="")
-        parser.add_argument("-a", "--all", help= "Find all solutions combinations", required=False, action="store_true", default="")
         parser.add_argument("-n", "--num", help = "Find solution in n words", required = False, type=int, default = 0)
         parser.add_argument("-e", "--exclude", help = "Words excluded from master word list", nargs="+", type=str, default = "")
 
@@ -289,7 +231,7 @@ class CommandLine:
         if argument.exclude:
             exclusion = [ex.strip().lower() for ex in argument.exclude]
 
-        solve(sides, argument.all, argument.num, exclusion)
+        solve(sides, argument.num, exclusion)
         
         
 
