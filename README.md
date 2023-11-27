@@ -85,6 +85,7 @@ positional arguments:
 options:
   -n NUM, --num NUM     Find solution in n words
   -e [EXCLUDE ...], --exclude [EXCLUDE ...] Words to exclude from master list
+  -a, --all             Find all possible solutions (multiple solutions per start word)
 ```
 
 
