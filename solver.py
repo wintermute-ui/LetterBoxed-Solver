@@ -123,28 +123,39 @@ class letterboxd_word:
     def encode(self):
         return {'score':self.score, 'word':self.word, 'letters':self.letters}
 
-def recursive_compile(solution: List[letterboxd_word], letter_dict: Dict[str,List[letterboxd_word]], completed_letters:Set[str], n_words:int) -> int:
+def recursive_compile(solution: List[letterboxd_word], letter_dict: Dict[str,List[letterboxd_word]], completed_letters:Set[str], nmax_words:Tuple[int, int], t_all:bool) -> int:
+    """
+    nmax_words: Tuple of (max words, the nth word)
+    """
     count = 0
-    if n_words <= 1:
+    if nmax_words[1] <= 1:
         return count
     
     for word in letter_dict[solution[-1].word[-1]]:
+        if not t_all and count >= 1:
+            break
+        
         tmp_letters = completed_letters.union(word.letters)
         if tmp_letters == word.accepted_letters:
 
-            count+=1
-            print(solution + [word])
-
+            #print(len(solution + [word]), nmax_words[0])
+            if len(solution + [word]) == nmax_words[0]:
+                count+=1
+                print(solution + [word])
+            elif t_all:
+                count+=1
+                print(solution + [word])
             
         else:
-            count += recursive_compile(solution + [word], letter_dict, tmp_letters, n_words-1)
+            letter_dict[solution[-1].word[-1]].remove(word)
+            count += recursive_compile(solution + [word], letter_dict, tmp_letters, (nmax_words[0], nmax_words[1]-1), t_all)
             
 
     return count
             
     
 
-def compile_solution(accepted_words: List[str], accept_ls: Set[str], n_words:int = 2) -> None:
+def compile_solution(accepted_words: List[str], accept_ls: Set[str], t_all:bool, n_words:int = 2) -> None:
 
     # Sort accepted words into dict where the starting character is the key to values of class letterboxd_word (dict(letter:[word1,word2,...]))
     letter_dict = {letter:[letterboxd_word(word, accept_ls) for word in accepted_words if word[0] == letter] for letter in accept_ls}
@@ -155,11 +166,16 @@ def compile_solution(accepted_words: List[str], accept_ls: Set[str], n_words:int
     total = 0
     for i in range(len(accepted_words)):
         best_word = heapq.heappop(best_word_heap)
-        total += recursive_compile([best_word], letter_dict, best_word.letters, n_words)
+        total += recursive_compile([best_word], letter_dict, best_word.letters, (n_words, n_words), t_all)
     
-    print(f"{total} solutions found!")
+    if total == 0:
+        print("No solutions found!")
+    elif total == 1:
+        print("A solution found!")
+    else:    
+        print(f"{total} solutions found!")
 
-def solve(letterbox_set: List[List[str]] = [], n:int=0, exclude:List[str]=[]):
+def solve(letterbox_set: List[List[str]] = [], n:int=0, exclude:List[str]=[], t_all:bool=False):
     """
     letterbox_set: List of the sides of a letterboxed puzzle (format: [['a','b','c], ['d','e','f], ...])
     """
@@ -209,16 +225,17 @@ def solve(letterbox_set: List[List[str]] = [], n:int=0, exclude:List[str]=[]):
     prune_list = prune_words(alpha, accept_letters, sides, exclude)
 
     if n > 0:
-        compile_solution(prune_list, accept_letters, n)
+        compile_solution(prune_list, accept_letters, t_all, n)
     else:
-        compile_solution(prune_list, accept_letters)
+        compile_solution(prune_list, accept_letters, t_all)
 
 class CommandLine:
     def __init__(self):
         parser = argparse.ArgumentParser(description = "Solves a LetterBoxed square")
         parser.add_argument("side", metavar="S", help="The letters on a side of a Letterboxed square", nargs='*', type=str, default="")
-        parser.add_argument("-n", "--num", help = "Find solution in n words", required = False, type=int, default = 0)
+        parser.add_argument("-n", "--num", help = "Find solutions in exactly n words", required = False, type=int, default=2)
         parser.add_argument("-e", "--exclude", help = "Words excluded from master word list", nargs="+", type=str, default = "")
+        parser.add_argument("-a", "--all", help="Find all possible solutions (with -n includes all solutions up to n words)", required=False, action="store_true", default=False)
 
         argument = parser.parse_args()
         sides = []
@@ -231,7 +248,7 @@ class CommandLine:
         if argument.exclude:
             exclusion = [ex.strip().lower() for ex in argument.exclude]
 
-        solve(sides, argument.num, exclusion)
+        solve(sides, argument.num, exclusion, argument.all)
         
         
 
